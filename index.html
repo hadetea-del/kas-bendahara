@@ -33,14 +33,14 @@
     background: #f0f4f8;
     color: var(--dark);
     min-height: 100vh;
-    padding-bottom: 80px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── Header ── */
   .header {
     background: linear-gradient(135deg, #1976d2 0%, #29b6f6 60%, #00acc1 100%);
     color: white;
-    padding: 14px 16px 18px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 18px;
     position: relative;
     overflow: hidden;
     min-height: 90px;
@@ -209,7 +209,8 @@
   .bottom-bar {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 72px;
+    height: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: white;
     border-top: 1px solid var(--gray-mid);
     display: flex;
@@ -803,7 +804,7 @@
   <div class="header-deco2"></div>
   <div class="header-inner">
     <div class="header-title">Bendahara Proyek Renovasi</div>
-    <div class="header-name">Ruang Kelas Baru (RKB)</div>
+    <div class="header-name">Kas RKB SDM Kukusan</div>
     <div class="header-sub">SD Muhammadiyah Kukusan</div>
   </div>
   <!-- Ilustrasi Gedung Sekolah SVG -->
@@ -1935,8 +1936,10 @@ function simpanTransaksi() {
     showToast('💾 Transaksi berhasil diperbarui!');
   } else {
     const kode = generateKode(currentJenis);
-    transaksi.unshift({ id: Date.now(), kode, ...data });
+    const newRow = { id: Date.now(), kode, ...data };
+    transaksi.unshift(newRow);
     showToast('✅ Transaksi berhasil disimpan!');
+    autoBackupGsheet(newRow);
   }
 
   saveData();
@@ -2818,6 +2821,25 @@ function setGsStatus(id, msg, cls) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.className = 'gsheet-status ' + cls;
+}
+
+// Auto-backup satu baris ke GSheet setiap ada transaksi baru
+async function autoBackupGsheet(dataRow) {
+  const url = getGsheetUrl();
+  if (!url) return; // silent: kalau URL belum diisi, skip saja
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: [dataRow] })
+    });
+    // toast kecil supaya user tahu backup jalan
+    showToast('☁️ Backup GSheet berhasil');
+  } catch(e) {
+    // silent fail — transaksi tetap tersimpan lokal
+    console.warn('GSheet backup gagal:', e.message);
+  }
 }
 
 // ══════════════════════════════════════════
